@@ -37,6 +37,32 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+
+    flavorDimensions += "env"
+    productFlavors {
+        create("dev") {
+            dimension = "env"
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+        }
+        create("staging") {
+            dimension = "env"
+            applicationIdSuffix = ".staging"
+            versionNameSuffix = "-staging"
+        }
+        create("preprod") {
+            dimension = "env"
+            applicationIdSuffix = ".preprod"
+            versionNameSuffix = "-preprod"
+        }
+        create("prod") {
+            dimension = "env"
+        }
+        // "store" shares the prod application ID — used for Play Store AABs.
+        create("store") {
+            dimension = "env"
+        }
+    }
 }
 
 flutter {

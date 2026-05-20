@@ -1,0 +1,208 @@
+definitions:
+  scripts:
+    - &install_dependencies
+      name: Install dependencies
+      script: |
+        flutter pub get
+    - &nightly_versioning
+      name: Update application version when building nightly
+      script: |
+        dart run scripts/nightly_versioning.dart
+
+  triggering_tag_test_sentry: &triggering_tag_test_sentry
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: 'test_sentry-v*'
+          include: true
+
+  build_android: &build_android
+    instance_type: linux_x2
+    max_build_duration: 30
+    cache:
+      cache_paths:
+        - $FLUTTER_ROOT/.pub-cache
+    scripts:
+      - *install_dependencies
+      - *nightly_versioning
+      - name: Build APK
+        script: |
+          BUILD_NUMBER=$(dart run scripts/generate_build_number.dart | tail -n 1)
+          flutter build apk --no-pub --$BUILD_MODE --flavor $APP_ENV \
+            --dart-define-from-file=env-$APP_ENV.json \
+            --build-number=$BUILD_NUMBER
+      - name: Upload sources & native symbols to Sentry
+        script: |
+          dart run sentry_dart_plugin
+    artifacts:
+      - build/app/outputs/flutter-apk/*.apk
+      - build/app/outputs/flutter-apk/mapping.txt
+
+  build_android_aab: &build_android_aab
+    instance_type: linux_x2
+    max_build_duration: 30
+    cache:
+      cache_paths:
+        - $FLUTTER_ROOT/.pub-cache
+    scripts:
+      - *install_dependencies
+      - *nightly_versioning
+      - name: Build AAB
+        script: |
+          BUILD_NUMBER=$(dart run scripts/generate_build_number.dart | tail -n 1)
+          if [ "$APP_ENV" = "store" ]; then
+            ENV_FILE="env-prod.json"
+          else
+            ENV_FILE="env-$APP_ENV.json"
+          fi
+          flutter build appbundle --no-pub --$BUILD_MODE --flavor $APP_ENV \
+            --dart-define-from-file=$ENV_FILE \
+            --build-number=$BUILD_NUMBER
+      - name: Upload sources & native symbols to Sentry
+        script: |
+          dart run sentry_dart_plugin
+    artifacts:
+      - build/app/outputs/bundle/$APP_ENV*/*.aab
+
+workflows:
+  build_android_dev:
+    name: "[dev] Build Android"
+    environment:
+      flutter: stable
+      java: 21
+      # TODO: configure these credential groups in Codemagic
+      #   - keystore_reference: Android signing keystore
+      #   - firebase_group: FIREBASE_SERVICE_ACCOUNT, FIREBASE_ANDROID_APP_ID_*
+      #   - sentry_group: SENTRY_AUTH_TOKEN (org-level auth token with
+      #                   project:releases scope) — also accepts SENTRY_ORG /
+      #                   SENTRY_PROJECT overrides if you don't bake them into
+      #                   pubspec.yaml
+      android_signing:
+        - keystore_reference
+      groups:
+        - firebase_group
+        - sentry_group
+      vars:
+        BUILD_MODE: "release"
+        APP_ENV: "dev"
+    << : *build_android
+    publishing:
+      firebase:
+        firebase_service_account: $FIREBASE_SERVICE_ACCOUNT
+        android:
+          app_id: $FIREBASE_ANDROID_APP_ID_DEV
+          groups:
+            - dev
+          artifact_type: 'apk'
+      email:
+        recipients:
+          - codemagic@example.com
+        notify:
+          success: true
+          failure: false
+
+  build_android_staging:
+    name: "[staging] Build Android"
+    environment:
+      flutter: stable
+      java: 21
+      android_signing:
+        - keystore_reference
+      groups:
+        - firebase_group
+        - sentry_group
+      vars:
+        BUILD_MODE: "profile"
+        APP_ENV: "staging"
+    <<: *triggering_tag_test_sentry
+    << : *build_android
+    publishing:
+      firebase:
+        firebase_service_account: $FIREBASE_SERVICE_ACCOUNT
+        android:
+          app_id: $FIREBASE_ANDROID_APP_ID_STAGING
+          groups:
+            - staging
+          artifact_type: 'apk'
+      email:
+        recipients:
+          - codemagic@example.com
+        notify:
+          success: true
+          failure: false
+
+  build_android_preprod:
+    name: "[preprod] Build Android"
+    environment:
+      flutter: stable
+      java: 21
+      android_signing:
+        - keystore_reference
+      groups:
+        - firebase_group
+        - sentry_group
+      vars:
+        BUILD_MODE: "profile"
+        APP_ENV: "preprod"
+    <<: *triggering_tag_test_sentry
+    << : *build_android
+    publishing:
+      firebase:
+        firebase_service_account: $FIREBASE_SERVICE_ACCOUNT
+        android:
+          app_id: $FIREBASE_ANDROID_APP_ID_PREPROD
+          groups:
+            - preprod
+          artifact_type: 'apk'
+      email:
+        recipients:
+          - codemagic@example.com
+        notify:
+          success: true
+          failure: false
+
+  build_android_prod:
+    name: "[prod] Build Android"
+    environment:
+      flutter: stable
+      java: 21
+      android_signing:
+        - keystore_reference
+      groups:
+        - firebase_group
+        - sentry_group
+      vars:
+        BUILD_MODE: "release"
+        APP_ENV: "prod"
+    <<: *triggering_tag_test_sentry
+    << : *build_android
+    publishing:
+      firebase:
+        firebase_service_account: $FIREBASE_SERVICE_ACCOUNT
+        android:
+          app_id: $FIREBASE_ANDROID_APP_ID_PROD
+          groups:
+            - prod
+          artifact_type: 'apk'
+      email:
+        recipients:
+          - codemagic@example.com
+        notify:
+          success: true
+          failure: false
+
+  build_android_store_prod:
+    name: "[prod] Build Android Store"
+    environment:
+      flutter: stable
+      java: 21
+      android_signing:
+        - keystore_reference
+      groups:
+        - sentry_group
+      vars:
+        BUILD_MODE: "release"
+        APP_ENV: "store"
+    <<: *triggering_tag_test_sentry
+    << : *build_android_aab
