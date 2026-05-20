@@ -1,0 +1,5 @@
+{
+  "APP_ENV": "prod",
+  "API_BASE_URL": "https://api.example.com",
+  "SENTRY_DSN": "https://df8fa56509d789f56615b55c049a1508@o4511416366727168.ingest.de.sentry.io/4511422565974096"
+}
