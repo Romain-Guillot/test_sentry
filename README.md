@@ -58,9 +58,12 @@ matching `env-<flavor>.json` at the repo root.
 
 ### Workflows
 
-- `build_android_dev` — pushes APK to Firebase App Distribution
-- `build_android_{staging,preprod,prod}` — tag-triggered APK + Firebase
+- `build_android_dev` — builds an APK on every push (manual trigger)
+- `build_android_{staging,preprod,prod}` — tag-triggered APK
 - `build_android_store_prod` — tag-triggered AAB for the Play Store
+
+Each workflow uploads sources + native symbols to Sentry after the build.
+APKs/AABs are published as Codemagic build artifacts.
 
 Tag pattern: `test_sentry-v*` (configurable in `codemagic.yaml`).
 
@@ -69,8 +72,6 @@ Tag pattern: `test_sentry-v*` (configurable in `codemagic.yaml`).
 Configure these groups in the Codemagic UI before running the workflows:
 
 - `keystore_reference` — Android upload keystore (alias, password, key)
-- `firebase_group` — `FIREBASE_SERVICE_ACCOUNT`,
-  `FIREBASE_ANDROID_APP_ID_{DEV,STAGING,PREPROD,PROD}`
-- `sentry_group` — `SENTRY_AUTH_TOKEN` (org-level token with
-  `project:releases` scope). Optionally `SENTRY_ORG` / `SENTRY_PROJECT` if
-  you prefer overriding `pubspec.yaml`.
+- `sentry_group` — `SENTRY_AUTH_TOKEN` (auth token with `project:releases`
+  scope). Optionally `SENTRY_ORG` / `SENTRY_PROJECT` if you prefer
+  overriding `pubspec.yaml`.
