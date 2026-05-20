@@ -18,7 +18,7 @@ definitions:
           include: true
 
   build_android: &build_android
-    instance_type: linux_x2
+    instance_type: mac_mini_m2
     max_build_duration: 30
     cache:
       cache_paths:
@@ -40,7 +40,7 @@ definitions:
       - build/app/outputs/flutter-apk/mapping.txt
 
   build_android_aab: &build_android_aab
-    instance_type: linux_x2
+    instance_type: mac_mini_m2
     max_build_duration: 30
     cache:
       cache_paths:
