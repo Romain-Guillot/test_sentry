@@ -1,6 +1,0 @@
-Device ID	Device Name
-# Add your test devices here following this format:
-# UDID	Device Name
-# Example:
-# 00008020-001234567890001E	John's iPad Pro
-# 00008030-000123456789002E	Jane's iPad Air
